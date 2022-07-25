@@ -29,12 +29,12 @@ This package is dart driver for gbase service.
 
 To add this package to your dart or flutter project, just add these line to your 
 pubspec.yaml file under 
-
+n
 ```yaml
 dependencies:
   dart_gbase_client:
     git:
-      url: git://github.com/stMerlHin/dart_gbase_client.git
+      url: https://github.com/stMerlHin/dart_gbase_client.git
       ref: stable
 ```
 
