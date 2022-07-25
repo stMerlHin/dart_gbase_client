@@ -78,4 +78,4 @@ _gbase.dispose();
 Gbase is a personal project which goal is to provide service like firebase does.
 This package is a simple 'mini sdk' for flutter framework. Package for platforms like 
 java, javascript and php are available under 
-http://www.github.com/gbase_clients/<language>_gbase_client
+http://www.github.com/<language>_gbase_client
