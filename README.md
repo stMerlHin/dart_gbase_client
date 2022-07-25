@@ -34,7 +34,7 @@ pubspec.yaml file under
 dependencies:
   dart_gbase_client:
     git:
-      url: git://github.com/stMerlHin/dart_gbase_client.git
+      url: https://github.com/stMerlHin/dart_gbase_client.git
       ref: stable
 ```
 
