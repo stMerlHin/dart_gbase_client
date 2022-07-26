@@ -2,8 +2,8 @@
 // All rights reserved. Use of this source code is governed by a
 // license that can be found in the LICENSE file.
 
-const String localhost = 'localhost';
-const String port = '800';
+const String kLocalhost = 'localhost';
+const String kPort = '8080';
 const String kConnectionId = 'connectionId';
 const String kTable = 'table';
 const String kValues = 'values';
