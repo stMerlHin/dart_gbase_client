@@ -15,7 +15,7 @@ and the Flutter guide for
 This package is dart driver for gbase service.
 
 # Version
- ``1.0.0
+ ``1.0.1
  ``
 
 ## Features
