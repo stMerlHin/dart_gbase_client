@@ -15,7 +15,7 @@ and the Flutter guide for
 This package is dart driver for gbase service.
 
 # Version
- ``1.0.0
+ ``1.0.1
  ``
 
 ## Features
@@ -29,7 +29,7 @@ This package is dart driver for gbase service.
 
 To add this package to your dart or flutter project, just add these line to your 
 pubspec.yaml file under 
-
+n
 ```yaml
 dependencies:
   dart_gbase_client:
