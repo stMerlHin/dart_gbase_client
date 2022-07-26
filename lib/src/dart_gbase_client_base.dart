@@ -33,13 +33,19 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 //     );
 class GBase {
   late WebSocketChannel _channel;
-  static String _gHost = localhost;
-  static String _gPort = port;
+  static String _gHost = kLocalhost;
+  static String _gPort = kPort;
   static String _connectionId = '';
   static late int _autoReconnectionDelay;
   static bool _autoReconnect = true;
   static bool _isConnected = false;
   static bool _initialized = false;
+  late Function(GBase) _onInitialization;
+  late Function(GBase) _onDisconnection;
+  late Function(String) _onReconnection;
+  late Function(String, GBase) _onConnection;
+  late Function(String, GBase) _onError;
+  late Function(Map<String, String>) _onConfigChanged;
   bool _disconnect = false;
 
   static final GBase _instance = GBase._();
@@ -50,50 +56,41 @@ class GBase {
   Future initialize({
     bool autoReconnect = true,
     int autoReconnectionDelay = 2,
-    String host = localhost,
-    String gPort = port,
+    String host = kLocalhost,
+    String port = kPort,
     Function(GBase)? onDisconnection,
     required Function(GBase) onInitialization,
     Function(String)? onReconnection,
     Function(String, GBase)? onConnection,
     Function(String, GBase)? onError,
+    Function(Map<String, String>)? onConfigChanged,
   }) async {
-    onInitialization(this);
+    _onInitialization = onInitialization;
     if (!_initialized) {
       _gHost = host;
-      _gPort = gPort;
-      _autoReconnect = autoReconnect;
-      _autoReconnectionDelay = autoReconnectionDelay;
+      _gPort = port;
 
-      await _connect(
-        onConnection: onConnection,
-        onDisconnection: onDisconnection,
-        onReconnection: onReconnection,
-        onError: onError,
-      );
+      _autoReconnect = autoReconnect;
+      _onConnection = onConnection ?? (s, g){};
+      _onReconnection = onReconnection ?? (s){};
+      _autoReconnectionDelay = autoReconnectionDelay;
+      _onConfigChanged = onConfigChanged ?? (d) {};
+      _onError = onError ?? (e, g){};
+      _onDisconnection = onDisconnection ?? (s){};
+      print(onInitialization);
+
+      await _connect();
+      _onInitialization(this);
       _initialized = true;
     }
   }
 
-  Future reconnect({
-    Function(GBase)? onNoneConnection,
-    //Function(String)? onReconnection,
-    Function(String, [GBase])? onConnection,
-    Function(String, [GBase])? onError,
-  }) async {
-    await _connect(
-      onConnection: onConnection,
-      onDisconnection: onNoneConnection,
-      onError: onError,
-    );
+  Future reconnect() async {
+    dispose();
+    await _connect();
   }
 
-  Future _connect({
-    Function(GBase)? onDisconnection,
-    Function(String)? onReconnection,
-    Function(String, GBase)? onConnection,
-    Function(String, GBase)? onError,
-  }) async {
+  Future _connect() async {
     _channel = WebSocketChannel.connect(Uri.parse('ws://$_gHost:$_gPort/ws'));
 
     ///Request connection id
@@ -102,36 +99,41 @@ class GBase {
     _channel.stream.listen((event) {
       //TODO should save the connection id
       _connectionId = event;
+      _isConnected = true;
 
-      if (onConnection != null) {
-        _isConnected = true;
-        onConnection(event, this);
-      }
+      _onConnection(event, this);
     }, onError: (e) {
-      if (onError != null) {
-        onError(e.toString(), this);
-      }
+      _onError(e.toString(), this);
     }).onDone(() async {
-      if (onDisconnection != null) {
-        onDisconnection(this);
-      }
+      _onDisconnection(this);
 
       ///Automatically reconnect the client if connection is closed in none
       ///appropriate way
       if (_autoReconnect && !_disconnect) {
         Timer(Duration(seconds: _autoReconnectionDelay), () async {
-          print('reconnection in progress');
-          await _connect(
-            onConnection: onConnection,
-            onDisconnection: onDisconnection,
-            onReconnection: onReconnection,
-            onError: onError,
-          );
+          _onReconnection(_connectionId);
+          await _connect();
         });
         //await Future.delayed(Duration(seconds: _autoReconnectionDelay));
-
       }
     });
+  }
+
+  ///Change the configurations relative to remote server
+  void changeConfig({String? host, String? port}) {
+    bool configChanged = false;
+    if (host != null) {
+      _gHost = host;
+      configChanged = true;
+    }
+    if (port != null) {
+      _gPort = port;
+      configChanged = true;
+    }
+    if (configChanged) {
+        _onConfigChanged({'host': _gHost, 'port': _gPort});
+      _connect();
+    }
   }
 
   static GBase get instance => _instance;
@@ -139,13 +141,17 @@ class GBase {
   static String get connectionId => _connectionId;
   static String get baseUrl => 'ws://$_gHost:$_gPort/ws/';
 
-  void dispose() {
+  String get host => _gHost;
+
+  String get port => _gPort;
+
+  Future dispose() async {
     _disconnect = true;
-    _channel.sink.close();
+    await _channel.sink.close();
   }
 }
 
-///  TableListener tableListener = TableListener(table: 'student');
+//  TableListener tableListener = TableListener(table: 'student');
 //     tableListener.listen(() {
 //       print('Change HAPPENED ON TABLE student');
 //     });
@@ -195,26 +201,21 @@ WebSocketChannel _createChannel(String url) {
   return WebSocketChannel.connect(Uri.parse('${GBase.baseUrl}' '$url'));
 }
 
-///
-///
-///
-/// and example of use.
-/// we want to get all user with 3 as id
-///GDirectRequest.select(
-///         sql: 'SELECT * FROM student WHERE id = ? ',
-///         table: 'student',
-///         values: [3]
-///    ).exec(
-///         onSuccess: (results) {
-///           results.data.forEach((element) {
-///             print(element);
-///
-///           });
-///         }, onError: (error) {
-///           print(error);
-///     });
-///
-///
+// an example of use.
+// we want to get all user with 3 as id
+//GDirectRequest.select(
+//         sql: 'SELECT * FROM student WHERE id = ? ',
+//         table: 'student',
+//         values: [3]
+//    ).exec(
+//         onSuccess: (results) {
+//           results.data.forEach((element) {
+//             print(element);
+//
+//           });
+//         }, onError: (error) {
+//           print(error);
+//     });
 class GDirectRequest {
   String connectionId;
   String sql;
@@ -224,10 +225,10 @@ class GDirectRequest {
 
   GDirectRequest(
       {required this.connectionId,
-      required this.sql,
-      required this.type,
-      required this.table,
-      this.values});
+        required this.sql,
+        required this.type,
+        required this.table,
+        this.values});
 
   factory GDirectRequest.select({
     required String sql,
@@ -360,23 +361,23 @@ enum GRequestType {
   drop,
   delete;
 
-  @override
-  String toString() {
-    switch (this) {
-      case GRequestType.select:
-        return 'select';
-      case GRequestType.update:
-        return 'update';
-      case GRequestType.insert:
-        return 'insert';
-      case GRequestType.delete:
-        return 'delete';
-      case GRequestType.create:
-        return 'create';
-      case GRequestType.drop:
-        return 'drop';
-    }
+@override
+String toString() {
+  switch (this) {
+    case GRequestType.select:
+      return 'select';
+    case GRequestType.update:
+      return 'update';
+    case GRequestType.insert:
+      return 'insert';
+    case GRequestType.delete:
+      return 'delete';
+    case GRequestType.create:
+      return 'create';
+    case GRequestType.drop:
+      return 'drop';
   }
+}
 }
 
 class GResult {
@@ -406,7 +407,7 @@ class GTask {
     HttpClient httpClient = HttpClient()
       ..connectionTimeout = const Duration(seconds: 10)
       ..badCertificateCallback =
-          ((X509Certificate cert, String host, int port) => trustSelfSigned);
+      ((X509Certificate cert, String host, int port) => trustSelfSigned);
 
     return httpClient;
   }
@@ -414,7 +415,7 @@ class GTask {
   static fileGetAllMock() {
     return List.generate(
       20,
-      (i) => GUpDownMod(
+          (i) => GUpDownMod(
           fileName: 'filename $i.jpg',
           dateModified: DateTime.now().add(Duration(minutes: i)),
           size: i * 1000),
@@ -528,7 +529,7 @@ class GTask {
     //     filename: fileUtil.basename(file.path));
 
     http.MultipartRequest requestMultipart =
-        http.MultipartRequest("POST", Uri.parse(url));
+    http.MultipartRequest("POST", Uri.parse(url));
 
     requestMultipart.files.add(multipart);
 
@@ -591,7 +592,7 @@ class GTask {
         onError: onError,
         file: file,
         destination:
-            'http://${GBase._gHost}:${GBase._gPort}/upload/covers/${path.basename(file.path)}/${path.extension(file.path).replaceRange(0, 1, '')}',
+        'http://${GBase._gHost}:${GBase._gPort}/upload/covers/${path.basename(file.path)}/${path.extension(file.path).replaceRange(0, 1, '')}',
         onUploadProgress: onUploadProgress,
         mediaType: MediaType(
             'image', path.extension(file.path).replaceRange(0, 1, '')));
@@ -607,7 +608,7 @@ class GTask {
         file: file,
         onError: onError,
         destination:
-            'http://${GBase._gHost}:${GBase._gPort}/upload/book/${path.basename(file.path)}/${path.extension(file.path).replaceRange(0, 1, '')}',
+        'http://${GBase._gHost}:${GBase._gPort}/upload/book/${path.basename(file.path)}/${path.extension(file.path).replaceRange(0, 1, '')}',
         onUploadProgress: onUploadProgress,
         onSuccess: onSuccess,
         mediaType: MediaType(
@@ -616,8 +617,8 @@ class GTask {
 
   static Future<String> fileDownload(
       {required String theUrl,
-      required String savePath,
-      OnUploadProgressCallback? onDownloadProgress}) async {
+        required String savePath,
+        OnUploadProgressCallback? onDownloadProgress}) async {
     final url = theUrl;
 
     final httpClient = getHttpClient();
@@ -641,7 +642,7 @@ class GTask {
     Completer completer = Completer<String>();
 
     httpResponse.listen(
-      (data) {
+          (data) {
         byteCount += data.length;
 
         raf.writeFromSync(data);
@@ -708,8 +709,8 @@ class GUpDownMod {
   }
 
   Map<String, dynamic> toJson() => {
-        "fileName": fileName,
-        "dateModified": dateModified,
-        "size": size,
-      };
+    "fileName": fileName,
+    "dateModified": dateModified,
+    "size": size,
+  };
 }
