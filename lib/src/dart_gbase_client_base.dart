@@ -77,7 +77,6 @@ class GBase {
       _onConfigChanged = onConfigChanged ?? (d) {};
       _onError = onError ?? (e, g){};
       _onDisconnection = onDisconnection ?? (s){};
-      print(onInitialization);
 
       await _connect();
       _onInitialization(this);

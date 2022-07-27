@@ -1,7 +1,8 @@
 name: dart_gbase_client
 publish_to: none
 description: A starting point for Dart libraries or applications.
-version: 1.0.1
+version: 1.0.1+1
+
 # homepage: https://www.example.com
 
 environment:
