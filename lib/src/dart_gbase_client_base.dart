@@ -85,7 +85,7 @@ class GBase {
   }
 
   Future reconnect() async {
-    dispose();
+    await dispose();
     await _connect();
   }
 
@@ -119,18 +119,20 @@ class GBase {
   }
 
   ///Change the configurations relative to remote server
-  void changeConfig({String? host, String? port}) {
+  Future changeConfig({String? host, String? port}) async {
     bool configChanged = false;
-    if (host != null) {
+    if (host != null && host != _gHost) {
       _gHost = host;
       configChanged = true;
     }
-    if (port != null) {
+    if (port != null && port != _gPort) {
       _gPort = port;
       configChanged = true;
     }
     if (configChanged) {
         _onConfigChanged({'host': _gHost, 'port': _gPort});
+        ///we dispose the current channel before creating the new
+        await dispose();
       _connect();
     }
   }
