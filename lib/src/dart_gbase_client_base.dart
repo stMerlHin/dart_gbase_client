@@ -148,7 +148,7 @@ class GBase {
 
   Future dispose() async {
     _disposed = true;
-    isConnected = false;
+    _isConnected = false;
     await _channel.sink.close();
   }
 }
