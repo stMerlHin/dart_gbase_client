@@ -46,7 +46,7 @@ class GBase {
   late Function(String, GBase) _onConnection;
   late Function(String, GBase) _onError;
   late Function(Map<String, String>) _onConfigChanged;
-  bool _disconnect = false;
+  bool _disposed = false;
 
   static final GBase _instance = GBase._();
 
@@ -90,6 +90,7 @@ class GBase {
   }
 
   Future _connect() async {
+    _disposed = false;
     _channel = WebSocketChannel.connect(Uri.parse('ws://$_gHost:$_gPort/ws'));
 
     ///Request connection id
@@ -108,12 +109,11 @@ class GBase {
 
       ///Automatically reconnect the client if connection is closed in none
       ///appropriate way
-      if (_autoReconnect && !_disconnect) {
+      if (_autoReconnect && !_disposed) {
         Timer(Duration(seconds: _autoReconnectionDelay), () async {
           _onReconnection(_connectionId);
           await _connect();
         });
-        //await Future.delayed(Duration(seconds: _autoReconnectionDelay));
       }
     });
   }
@@ -147,7 +147,7 @@ class GBase {
   String get port => _gPort;
 
   Future dispose() async {
-    _disconnect = true;
+    _disposed = true;
     await _channel.sink.close();
   }
 }
