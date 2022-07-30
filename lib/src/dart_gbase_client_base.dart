@@ -106,6 +106,7 @@ class GBase {
       _onError(e.toString(), this);
     }).onDone(() async {
       _onDisconnection(this);
+      _isConnected = false;
 
       ///Automatically reconnect the client if connection is closed in none
       ///appropriate way
