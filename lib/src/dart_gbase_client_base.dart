@@ -9,6 +9,7 @@ import 'package:dart_gbase_client/src/constants.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
+import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 //How to initialize.
@@ -161,14 +162,14 @@ class GBase {
 class TableListener {
   late WebSocketChannel _webSocket;
   bool _closeByClient = false;
-  late String _connectionId;
+  late String _uid;
   String table;
   late int _reconnectionDelay;
 
   TableListener({required this.table});
 
   void listen(Function onChanged, {int reconnectionDelay = 1000}) {
-    _connectionId = GBase.connectionId;
+    _uid = Uuid().v1();
     _reconnectionDelay = reconnectionDelay;
     _create(onChanged);
   }
@@ -189,7 +190,7 @@ class TableListener {
 
   String _toJson() {
     return jsonEncode({
-      kConnectionId: _connectionId,
+      kConnectionId: _uid,
       kTable: table,
     });
   }
