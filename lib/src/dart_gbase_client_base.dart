@@ -45,6 +45,7 @@ class GBase {
   late Function(GBase) _onDisconnection;
   late Function(String) _onReconnection;
   late Function(String, GBase) _onConnection;
+  bool _connectionLocked = false;
   late Function(String, GBase) _onError;
   late Function(Map<String, String>) _onConfigChanged;
   bool _disposed = false;
@@ -91,6 +92,7 @@ class GBase {
   }
 
   Future _connect() async {
+    _connectionLocked = true;
     _disposed = false;
     _channel = WebSocketChannel.connect(Uri.parse('ws://$_gHost:$_gPort/ws'));
 
@@ -106,22 +108,25 @@ class GBase {
     }, onError: (e) {
       _onError(e.toString(), this);
     }).onDone(() async {
-      print('TRYING TO RECONNECT');
+      _connectionLocked = false;
       _tryReconnection();
     });
   }
 
   _tryReconnection() async {
-    _onDisconnection(this);
-    _isConnected = false;
+    if(!_connectionLocked) {
+      _onDisconnection(this);
+      _isConnected = false;
 
-    ///Automatically reconnect the client if connection is closed in none
-    ///appropriate way
-    if (_autoReconnect && !_disposed) {
-      Timer(Duration(seconds: _autoReconnectionDelay), () async {
-        _onReconnection(_connectionId);
-        await _connect();
-      });
+      ///Automatically reconnect the client if connection is closed in none
+      ///appropriate way
+      if (_autoReconnect && !_disposed) {
+        Timer(Duration(seconds: _autoReconnectionDelay), () async {
+          _onReconnection(_connectionId);
+          await _connect();
+        });
+      }
+      _connectionLocked = false;
     }
   }
 
