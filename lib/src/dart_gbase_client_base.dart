@@ -45,7 +45,6 @@ class GBase {
   late Function(GBase) _onDisconnection;
   late Function(String) _onReconnection;
   late Function(String, GBase) _onConnection;
-  bool _connectionLocked = false;
   late Function(String, GBase) _onError;
   late Function(Map<String, String>) _onConfigChanged;
   bool _disposed = false;
@@ -92,7 +91,6 @@ class GBase {
   }
 
   Future _connect() async {
-    _connectionLocked = true;
     _disposed = false;
     _channel = WebSocketChannel.connect(Uri.parse('ws://$_gHost:$_gPort/ws'));
 
@@ -108,25 +106,22 @@ class GBase {
     }, onError: (e) {
       _onError(e.toString(), this);
     }).onDone(() async {
-      _connectionLocked = false;
+      print('TRYING TO RECONNECT');
       _tryReconnection();
     });
   }
 
   _tryReconnection() async {
-    if(!_connectionLocked) {
-      _onDisconnection(this);
-      _isConnected = false;
+    _onDisconnection(this);
+    _isConnected = false;
 
-      ///Automatically reconnect the client if connection is closed in none
-      ///appropriate way
-      if (_autoReconnect && !_disposed) {
-        Timer(Duration(seconds: _autoReconnectionDelay), () async {
-          _onReconnection(_connectionId);
-          await _connect();
-        });
-      }
-      _connectionLocked = false;
+    ///Automatically reconnect the client if connection is closed in none
+    ///appropriate way
+    if (_autoReconnect && !_disposed) {
+      Timer(Duration(seconds: _autoReconnectionDelay), () async {
+        _onReconnection(_connectionId);
+        await _connect();
+      });
     }
   }
 
@@ -142,9 +137,9 @@ class GBase {
       configChanged = true;
     }
     if (configChanged) {
-        _onConfigChanged({'host': _gHost, 'port': _gPort});
-        ///we dispose the current channel before creating the new
-        await dispose();
+      _onConfigChanged({'host': _gHost, 'port': _gPort});
+      ///we dispose the current channel before creating the new
+      await dispose();
       _connect();
     }
   }
@@ -189,6 +184,8 @@ class TableListener {
     _webSocket.sink.add(_toJson());
     _webSocket.stream.listen((event) {
       onChanged();
+    }, onError: (e) {
+
     }).onDone(() {
       if (!_closeByClient) {
         Timer(Duration(milliseconds: _reconnectionDelay), () {
@@ -375,23 +372,23 @@ enum GRequestType {
   drop,
   delete;
 
-@override
-String toString() {
-  switch (this) {
-    case GRequestType.select:
-      return 'select';
-    case GRequestType.update:
-      return 'update';
-    case GRequestType.insert:
-      return 'insert';
-    case GRequestType.delete:
-      return 'delete';
-    case GRequestType.create:
-      return 'create';
-    case GRequestType.drop:
-      return 'drop';
+  @override
+  String toString() {
+    switch (this) {
+      case GRequestType.select:
+        return 'select';
+      case GRequestType.update:
+        return 'update';
+      case GRequestType.insert:
+        return 'insert';
+      case GRequestType.delete:
+        return 'delete';
+      case GRequestType.create:
+        return 'create';
+      case GRequestType.drop:
+        return 'drop';
+    }
   }
-}
 }
 
 class GResult {
