@@ -105,19 +105,24 @@ class GBase {
       _onConnection(event, this);
     }, onError: (e) {
       _onError(e.toString(), this);
+      _tryReconnection();
     }).onDone(() async {
-      _onDisconnection(this);
-      _isConnected = false;
-
-      ///Automatically reconnect the client if connection is closed in none
-      ///appropriate way
-      if (_autoReconnect && !_disposed) {
-        Timer(Duration(seconds: _autoReconnectionDelay), () async {
-          _onReconnection(_connectionId);
-          await _connect();
-        });
-      }
+      _tryReconnection();
     });
+  }
+
+  _tryReconnection() async {
+    _onDisconnection(this);
+    _isConnected = false;
+
+    ///Automatically reconnect the client if connection is closed in none
+    ///appropriate way
+    if (_autoReconnect && !_disposed) {
+      Timer(Duration(seconds: _autoReconnectionDelay), () async {
+        _onReconnection(_connectionId);
+        await _connect();
+      });
+    }
   }
 
   ///Change the configurations relative to remote server
