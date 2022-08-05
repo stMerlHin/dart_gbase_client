@@ -105,8 +105,8 @@ class GBase {
       _onConnection(event, this);
     }, onError: (e) {
       _onError(e.toString(), this);
-      _tryReconnection();
     }).onDone(() async {
+      print('TRYING TO RECONNECT');
       _tryReconnection();
     });
   }
